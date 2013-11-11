@@ -26,7 +26,6 @@ import net.rrm.ehour.timesheet.dto.WeekOverview;
 import net.rrm.ehour.ui.timesheet.util.TimesheetRowComparator;
 import net.rrm.ehour.util.DateUtil;
 
-import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -55,7 +54,7 @@ public class TimesheetFactory {
         List<TimesheetRow> timesheetRows = createTimesheetRows(weekOverview.getAssignmentMap(), timesheetDates, weekOverview.getProjectAssignments(), timesheet);
 
         timesheet.setCustomers(structureRowsPerCustomer(timesheetRows));
-        timesheet.setDateSequence(dateSequence.toArray(new Date[7]));
+        timesheet.setTimesheetDates(timesheetDates.toArray(new TimesheetDate[7]));
         timesheet.setWeekStart(weekOverview.getWeekRange().getDateStart());
         timesheet.setWeekEnd(weekOverview.getWeekRange().getDateEnd());
 
@@ -123,7 +122,7 @@ public class TimesheetFactory {
                                                    Timesheet timesheet) {
         List<TimesheetRow> timesheetRows = new ArrayList<TimesheetRow>();
         Calendar firstDate = DateUtil.getCalendar(config);
-        firstDate.setTime(timesheetDates.get(0).date);
+        firstDate.setTime(timesheetDates.get(0).getDate());
 
         for (ProjectAssignment assignment : assignmentMap.keySet()) {
             TimesheetRow timesheetRow = new TimesheetRow(config);
@@ -133,10 +132,9 @@ public class TimesheetFactory {
 
             // create a cell for every requested timesheetDate
             for (TimesheetDate timesheetDate : timesheetDates) {
-                TimesheetEntry entry = assignmentMap.get(assignment).get(timesheetDate.formatted);
+                TimesheetEntry entry = assignmentMap.get(assignment).get(timesheetDate.getFormatted());
 
-                timesheetRow.addTimesheetCell(timesheetDate.dayInWeek,
-                        createTimesheetCell(assignment, entry, timesheetDate.date, timesheetDate.locked, validProjectAssignments));
+                timesheetRow.addTimesheetCell(timesheetDate.getDayInWeek(), createTimesheetCell(assignment, entry, timesheetDate.getDate(), timesheetDate.isLocked(), validProjectAssignments));
             }
 
             timesheetRows.add(timesheetRow);
@@ -180,19 +178,5 @@ public class TimesheetFactory {
         isValid = isValid && DateUtil.isDateWithinRange(date, dateRange);
 
         return isValid;
-    }
-
-    private static class TimesheetDate implements Serializable {
-        final Date date;
-        final int dayInWeek;
-        final String formatted;
-        final boolean locked;
-
-        private TimesheetDate(Date date, int dayInWeek, String formatted, boolean locked) {
-            this.date = date;
-            this.dayInWeek = dayInWeek;
-            this.formatted = formatted;
-            this.locked = locked;
-        }
     }
 }

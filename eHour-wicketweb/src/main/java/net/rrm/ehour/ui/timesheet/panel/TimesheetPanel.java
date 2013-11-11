@@ -16,7 +16,6 @@
 
 package net.rrm.ehour.ui.timesheet.panel;
 
-import net.rrm.ehour.config.EhourConfig;
 import net.rrm.ehour.domain.Customer;
 import net.rrm.ehour.domain.User;
 import net.rrm.ehour.project.status.ProjectAssignmentStatus;
@@ -31,11 +30,13 @@ import net.rrm.ehour.ui.common.event.EventPublisher;
 import net.rrm.ehour.ui.common.formguard.GuardedAjaxLink;
 import net.rrm.ehour.ui.common.model.DateModel;
 import net.rrm.ehour.ui.common.model.MessageResourceModel;
+import net.rrm.ehour.ui.common.panel.AbstractBasePanel;
 import net.rrm.ehour.ui.common.session.EhourWebSession;
 import net.rrm.ehour.ui.timesheet.common.FormHighlighter;
 import net.rrm.ehour.ui.timesheet.common.TimesheetAjaxEventType;
 import net.rrm.ehour.ui.timesheet.dto.GrandTotal;
 import net.rrm.ehour.ui.timesheet.dto.Timesheet;
+import net.rrm.ehour.ui.timesheet.dto.TimesheetDate;
 import net.rrm.ehour.ui.timesheet.model.TimesheetModel;
 import net.rrm.ehour.util.DateUtil;
 import org.apache.wicket.AttributeModifier;
@@ -53,7 +54,6 @@ import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.panel.Fragment;
-import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.ResourceModel;
@@ -73,20 +73,14 @@ import java.util.List;
  * The main panel - timesheet form
  */
 
-public class TimesheetPanel extends Panel implements Serializable {
+public class TimesheetPanel extends AbstractBasePanel<Timesheet> implements Serializable {
     private static final long serialVersionUID = 7704288648724599187L;
 
-    private EhourConfig config;
     private WebComponent serverMsgLabel;
     private Form<TimesheetModel> timesheetForm;
 
     public TimesheetPanel(String id, User user, Calendar forWeek) {
         super(id);
-
-        EhourWebSession session = EhourWebSession.getSession();
-        GrandTotal grandTotals;
-
-        config = session.getEhourConfig();
 
         this.setOutputMarkupId(true);
 
@@ -110,7 +104,7 @@ public class TimesheetPanel extends Panel implements Serializable {
         timesheetForm.add(blueBorder);
 
         // setup form
-        grandTotals = buildForm(timesheetForm, blueBorder);
+        GrandTotal grandTotals = buildForm(timesheetForm, blueBorder);
 
         // add last row with grand totals
         addGrandTotals(blueBorder, grandTotals, timesheet.getWeekStart());
@@ -144,9 +138,9 @@ public class TimesheetPanel extends Panel implements Serializable {
     @SuppressWarnings("serial")
     private WebMarkupContainer getWeekNavigation(final Date weekStart, final Date weekEnd) {
         Fragment titleFragment = new Fragment("title", "title", TimesheetPanel.this);
-        SimpleDateFormat dateFormatter = new SimpleDateFormat("dd MMM yyyy", config.getFormattingLocale());
+        SimpleDateFormat dateFormatter = new SimpleDateFormat("dd MMM yyyy", getConfig().getFormattingLocale());
 
-        int weekOfYear = DateUtil.getWeekNumberForDate(weekStart, config.getFirstDayOfWeek());
+        int weekOfYear = DateUtil.getWeekNumberForDate(weekStart, getConfig().getFirstDayOfWeek());
 
         IModel<String> weekLabelModel = new MessageResourceModel("timesheet.weekTitle", this, weekOfYear, dateFormatter.format(weekStart), dateFormatter.format(weekEnd));
 
@@ -245,8 +239,8 @@ public class TimesheetPanel extends Panel implements Serializable {
                 TimesheetPanel.this,
                 null,
                 new PropertyModel<Date>(getDefaultModel(), "totalBookedHours"),
-                new DateModel(new PropertyModel<Date>(getDefaultModel(), "weekStart"), config, DateModel.DATESTYLE_FULL_SHORT),
-                new DateModel(new PropertyModel<Date>(getDefaultModel(), "weekEnd"), config, DateModel.DATESTYLE_FULL_SHORT));
+                new DateModel(new PropertyModel<Date>(getDefaultModel(), "weekStart"), getConfig(), DateModel.DATESTYLE_FULL_SHORT),
+                new DateModel(new PropertyModel<Date>(getDefaultModel(), "weekEnd"), getConfig(), DateModel.DATESTYLE_FULL_SHORT));
 
         return updateServerMessage(model);
 
@@ -272,10 +266,26 @@ public class TimesheetPanel extends Panel implements Serializable {
      */
     private void addDateLabels(WebMarkupContainer parent) {
         for (int i = 1, j = 0; i <= 7; i++, j++) {
-            Label label = new Label("day" + i + "Label", new DateModel(new PropertyModel<Date>(getDefaultModelObject(), "dateSequence[" + j + "]"), config, DateModel.DATESTYLE_TIMESHEET_DAYLONG));
-            label.setEscapeModelStrings(false);
-            parent.add(label);
+            TimesheetDate timesheetDate = getPanelModelObject().getTimesheetDates()[j];
+
+            String id = "day" + i + "Label";
+
+            if (timesheetDate.isLocked()) {
+                Fragment fragment = new Fragment(id, "lockedDayHeading", this);
+
+                fragment.add(createLabel(j, "label"));
+                parent.add(fragment);
+            } else {
+                Label label = createLabel(j, id);
+                parent.add(label);
+            }
         }
+    }
+
+    private Label createLabel(int j, String id) {
+        Label label = new Label(id, new DateModel(new PropertyModel<Date>(getDefaultModelObject(), "timesheetDates[" + j + "].date"), getConfig(), DateModel.DATESTYLE_TIMESHEET_DAYLONG));
+        label.setEscapeModelStrings(false);
+        return label;
     }
 
     /**
@@ -283,7 +293,7 @@ public class TimesheetPanel extends Panel implements Serializable {
      */
     private void moveWeek(Date onScreenDate, int weekDiff) {
         EhourWebSession session = (EhourWebSession) getSession();
-        Calendar cal = DateUtil.getCalendar(config);
+        Calendar cal = DateUtil.getCalendar(getConfig());
 
         cal.setTime(onScreenDate);
         cal.add(Calendar.WEEK_OF_YEAR, weekDiff);
