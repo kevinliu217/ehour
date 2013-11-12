@@ -14,6 +14,17 @@ div.timesheet {
     border-right: 1px solid #a1bcd7;
 }
 
+.lockedDate {
+    width: 54px;
+    padding-left: 16px;
+    float: left;
+}
+
+.lockedIcon {
+    position: relative;
+    margin-top: 13px
+}
+
 .timesheetTable tr.weekColumnRow td {
     font: 16px/16px Geneva, Arial, Helvetica, sans-serif;
     color: #536e87;
