@@ -14,15 +14,13 @@ div.timesheet {
     border-right: 1px solid #a1bcd7;
 }
 
-.lockedDate {
-    width: 54px;
-    padding-left: 16px;
-    float: left;
-}
-
 .lockedIcon {
     position: relative;
-    margin-top: 13px
+    top: -16px;
+    left: 60px;
+    width: 16px;
+    text-align: right;
+    background-color: red;
 }
 
 .timesheetTable tr.weekColumnRow td {
